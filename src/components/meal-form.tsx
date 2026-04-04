@@ -1,0 +1,290 @@
+"use client";
+
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import type { NutritionEstimate, Meal } from "@/lib/types";
+
+export function MealForm() {
+  const [description, setDescription] = useState("");
+  const [estimate, setEstimate] = useState<NutritionEstimate | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editValues, setEditValues] = useState<NutritionEstimate>({
+    calories: 0,
+    protein_g: 0,
+    fat_g: 0,
+    carbs_g: 0,
+  });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [recentMeals, setRecentMeals] = useState<Meal[]>([]);
+  const router = useRouter();
+  const supabase = createClient();
+
+  // Load recent meals for quick re-entry
+  useEffect(() => {
+    async function loadRecent() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("meals")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (data) {
+        // Deduplicate by description
+        const seen = new Set<string>();
+        const unique = data.filter((m: Meal) => {
+          if (seen.has(m.description)) return false;
+          seen.add(m.description);
+          return true;
+        });
+        setRecentMeals(unique);
+      }
+    }
+    loadRecent();
+  }, [supabase]);
+
+  async function handleEstimate() {
+    if (!description.trim()) return;
+    setLoading(true);
+    setError("");
+    setEstimate(null);
+
+    try {
+      const res = await fetch("/api/nutrition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: description.trim() }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "推定に失敗しました");
+        setLoading(false);
+        return;
+      }
+
+      const data: NutritionEstimate = await res.json();
+      setEstimate(data);
+      setEditValues(data);
+    } catch {
+      setError("通信エラーが発生しました");
+    }
+    setLoading(false);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setError("");
+
+    const values = editMode ? editValues : estimate;
+    if (!values) return;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("meals").insert({
+      user_id: user.id,
+      date: new Date().toISOString().split("T")[0],
+      description: description.trim(),
+      calories: values.calories,
+      protein_g: values.protein_g,
+      fat_g: values.fat_g,
+      carbs_g: values.carbs_g,
+      ai_estimated: !editMode,
+      user_confirmed: true,
+    });
+
+    if (insertError) {
+      setError("保存に失敗しました。再試行してください");
+      setSaving(false);
+      return;
+    }
+
+    router.push("/dashboard");
+    router.refresh();
+  }
+
+  function handleQuickEntry(meal: Meal) {
+    setDescription(meal.description);
+    setEstimate({
+      calories: meal.calories ?? 0,
+      protein_g: meal.protein_g ?? 0,
+      fat_g: meal.fat_g ?? 0,
+      carbs_g: meal.carbs_g ?? 0,
+    });
+    setEditValues({
+      calories: meal.calories ?? 0,
+      protein_g: meal.protein_g ?? 0,
+      fat_g: meal.fat_g ?? 0,
+      carbs_g: meal.carbs_g ?? 0,
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Recent meals for quick re-entry */}
+      {recentMeals.length > 0 && !estimate && (
+        <div>
+          <p className="text-xs text-[#737373] mb-2">最近の食事</p>
+          <div className="flex flex-wrap gap-2">
+            {recentMeals.map((meal) => (
+              <button
+                key={meal.id}
+                onClick={() => handleQuickEntry(meal)}
+                className="rounded-lg bg-[#262626] border border-[#333] px-3 py-2 text-xs text-[#a3a3a3] hover:bg-[#333] transition-colors text-left max-w-[200px] truncate"
+              >
+                {meal.description}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Text input */}
+      <div>
+        <input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !loading) handleEstimate();
+          }}
+          placeholder="鶏胸肉200g、ご飯1杯"
+          className="w-full rounded-xl bg-[#1a1a1a] border border-[#262626] px-4 py-3 text-[#f5f5f5] placeholder-[#737373] focus:outline-none focus:border-[#3b82f6] min-h-[44px]"
+          disabled={loading}
+        />
+      </div>
+
+      {!estimate && (
+        <div className="space-y-2">
+          <button
+            onClick={handleEstimate}
+            disabled={loading || !description.trim()}
+            className="w-full rounded-xl bg-[#3b82f6] px-4 py-3 text-white font-medium hover:bg-[#2563eb] transition-colors disabled:opacity-50 min-h-[44px]"
+          >
+            {loading ? (
+              <span className="animate-pulse">栄養素を推定中...</span>
+            ) : (
+              "AIで栄養素を推定"
+            )}
+          </button>
+          <button
+            onClick={() => {
+              if (!description.trim()) {
+                setError("食事内容を入力してください");
+                return;
+              }
+              setEstimate({ calories: 0, protein_g: 0, fat_g: 0, carbs_g: 0 });
+              setEditValues({ calories: 0, protein_g: 0, fat_g: 0, carbs_g: 0 });
+              setEditMode(true);
+            }}
+            disabled={!description.trim()}
+            className="w-full rounded-xl bg-[#262626] px-4 py-3 text-[#a3a3a3] font-medium hover:bg-[#333] transition-colors disabled:opacity-50 min-h-[44px]"
+          >
+            手動で入力
+          </button>
+        </div>
+      )}
+
+      {error && <p className="text-[#f97316] text-sm">{error}</p>}
+
+      {/* Estimation result */}
+      {estimate && (
+        <div className="rounded-xl bg-[#1a1a1a] border border-[#262626] p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-[#f5f5f5]">推定結果</p>
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className="text-xs text-[#3b82f6] hover:text-[#60a5fa] min-h-[44px] flex items-center"
+            >
+              {editMode ? "元に戻す" : "編集"}
+            </button>
+          </div>
+
+          {editMode ? (
+            <div className="grid grid-cols-2 gap-3">
+              {(
+                [
+                  ["calories", "カロリー", "kcal"],
+                  ["protein_g", "タンパク質", "g"],
+                  ["fat_g", "脂質", "g"],
+                  ["carbs_g", "炭水化物", "g"],
+                ] as const
+              ).map(([key, label, unit]) => (
+                <div key={key}>
+                  <label className="text-xs text-[#737373]">
+                    {label} ({unit})
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editValues[key]}
+                    onChange={(e) =>
+                      setEditValues({
+                        ...editValues,
+                        [key]: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full mt-1 rounded-lg bg-[#262626] border border-[#333] px-3 py-2 text-sm text-[#f5f5f5] tabular-nums min-h-[44px]"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <div>
+                <p className="text-xs text-[#737373]">カロリー</p>
+                <p className="text-lg font-semibold text-[#f5f5f5] tabular-nums">
+                  {estimate.calories}
+                </p>
+                <p className="text-xs text-[#737373]">kcal</p>
+              </div>
+              <div>
+                <p className="text-xs text-[#737373]">タンパク質</p>
+                <p className="text-lg font-semibold text-[#22c55e] tabular-nums">
+                  {estimate.protein_g}
+                </p>
+                <p className="text-xs text-[#737373]">g</p>
+              </div>
+              <div>
+                <p className="text-xs text-[#737373]">脂質</p>
+                <p className="text-lg font-semibold text-[#f5f5f5] tabular-nums">
+                  {estimate.fat_g}
+                </p>
+                <p className="text-xs text-[#737373]">g</p>
+              </div>
+              <div>
+                <p className="text-xs text-[#737373]">炭水化物</p>
+                <p className="text-lg font-semibold text-[#f5f5f5] tabular-nums">
+                  {estimate.carbs_g}
+                </p>
+                <p className="text-xs text-[#737373]">g</p>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full rounded-xl bg-[#22c55e] px-4 py-3 text-white font-semibold hover:bg-[#16a34a] transition-colors disabled:opacity-50 min-h-[44px]"
+          >
+            {saving ? "保存中..." : "保存する"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
