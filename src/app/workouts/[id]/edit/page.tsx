@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { NavBar } from "@/components/nav-bar";
+import { RestTimer } from "@/components/rest-timer";
 import type { WorkoutSet } from "@/lib/types";
 
 type SetInput = {
@@ -187,6 +188,7 @@ export default function EditWorkoutPage() {
         </button>
       </main>
 
+      <RestTimer />
       <NavBar />
     </div>
   );

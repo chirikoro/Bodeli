@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { calculateFeedback } from "@/lib/feedback";
 import { FeedbackCard } from "@/components/feedback-card";
+import { WeeklyChart } from "@/components/weekly-chart";
 import { NavBar } from "@/components/nav-bar";
 import { DeleteButton } from "@/components/delete-button";
 import Link from "next/link";
@@ -18,8 +19,13 @@ export default async function DashboardPage() {
 
   const today = new Date().toISOString().split("T")[0];
 
+  // 7 days ago for weekly chart
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 6);
+  const weekAgoStr = weekAgo.toISOString().split("T")[0];
+
   // Parallel fetch for performance
-  const [profileRes, mealsRes, sessionsRes] = await Promise.all([
+  const [profileRes, mealsRes, sessionsRes, weekMealsRes, weekSessionsRes] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase
       .from("meals")
@@ -33,6 +39,18 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .eq("date", today)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("meals")
+      .select("date, protein_g")
+      .eq("user_id", user.id)
+      .gte("date", weekAgoStr)
+      .lte("date", today),
+    supabase
+      .from("workout_sessions")
+      .select("id, date")
+      .eq("user_id", user.id)
+      .gte("date", weekAgoStr)
+      .lte("date", today),
   ]);
 
   const profile = profileRes.data as Profile | null;
@@ -57,6 +75,42 @@ export default async function DashboardPage() {
     0
   );
 
+  // Weekly chart data
+  const weekMeals = (weekMealsRes.data ?? []) as { date: string; protein_g: number | null }[];
+  const weekSessions = (weekSessionsRes.data ?? []) as { id: string; date: string }[];
+
+  // Fetch sets for weekly sessions
+  let weekSets: { session_id: string; weight_kg: number; reps: number }[] = [];
+  if (weekSessions.length > 0) {
+    const weekSessionIds = weekSessions.map((s) => s.id);
+    const { data } = await supabase
+      .from("workout_sets")
+      .select("session_id, weight_kg, reps")
+      .in("session_id", weekSessionIds);
+    weekSets = (data ?? []) as typeof weekSets;
+  }
+
+  const dayLabels = ["日", "月", "火", "水", "木", "金", "土"];
+  const weeklyData = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6 + i);
+    const dateStr = d.toISOString().split("T")[0];
+    const dayProtein = weekMeals
+      .filter((m) => m.date === dateStr)
+      .reduce((sum, m) => sum + (m.protein_g ?? 0), 0);
+    const daySessions = weekSessions.filter((s) => s.date === dateStr);
+    const daySessionIds = new Set(daySessions.map((s) => s.id));
+    const dayVolume = weekSets
+      .filter((s) => daySessionIds.has(s.session_id))
+      .reduce((sum, s) => sum + s.weight_kg * s.reps, 0);
+    return {
+      date: dateStr,
+      label: `${d.getMonth() + 1}/${d.getDate()}(${dayLabels[d.getDay()]})`,
+      volume: dayVolume,
+      protein: Math.round(dayProtein),
+    };
+  });
+
   const feedback = calculateFeedback(
     profile?.weight_kg ?? 70,
     profile?.protein_target_per_kg ?? 2.0,
@@ -76,6 +130,9 @@ export default async function DashboardPage() {
       <main className="px-4 space-y-4">
         {/* Feedback Card */}
         <FeedbackCard feedback={feedback} />
+
+        {/* Weekly Chart */}
+        <WeeklyChart data={weeklyData} />
 
         {/* Today's Meals */}
         <section>
