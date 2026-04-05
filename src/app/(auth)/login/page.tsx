@@ -8,6 +8,7 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const searchParams = useSearchParams();
   const authError = searchParams.get("error");
   const supabase = createClient();
@@ -25,14 +26,19 @@ function LoginForm() {
     e.preventDefault();
     if (!email.trim()) return;
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({
+    setError("");
+    const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
     setLoading(false);
-    if (!error) setSent(true);
+    if (otpError) {
+      setError(otpError.message);
+    } else {
+      setSent(true);
+    }
   }
 
   return (
@@ -87,6 +93,10 @@ function LoginForm() {
           <span className="text-[#737373] text-xs">または</span>
           <div className="flex-1 h-px bg-[#262626]" />
         </div>
+
+        {error && (
+          <p className="text-[#f97316] text-sm text-center">{error}</p>
+        )}
 
         {sent ? (
           <p className="text-center text-[#22c55e] text-sm">
