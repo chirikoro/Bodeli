@@ -14,6 +14,7 @@ export default function EditMealPage() {
   const [proteinG, setProteinG] = useState("");
   const [fatG, setFatG] = useState("");
   const [carbsG, setCarbsG] = useState("");
+  const [estimating, setEstimating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -39,6 +40,32 @@ export default function EditMealPage() {
     }
     loadMeal();
   }, [supabase, id]);
+
+  async function handleReEstimate() {
+    if (!description.trim()) return;
+    setEstimating(true);
+    setError("");
+    try {
+      const res = await fetch("/api/nutrition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: description.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "推定に失敗しました");
+      } else {
+        const data = await res.json();
+        setCalories(String(data.calories));
+        setProteinG(String(data.protein_g));
+        setFatG(String(data.fat_g));
+        setCarbsG(String(data.carbs_g));
+      }
+    } catch {
+      setError("通信エラーが発生しました");
+    }
+    setEstimating(false);
+  }
 
   async function handleSave() {
     if (!description.trim()) {
@@ -98,6 +125,13 @@ export default function EditMealPage() {
             onChange={(e) => setDescription(e.target.value)}
             className="w-full mt-1 rounded-xl bg-[#1a1a1a] border border-[#262626] px-4 py-3 text-[#f5f5f5] min-h-[44px]"
           />
+          <button
+            onClick={handleReEstimate}
+            disabled={estimating || !description.trim()}
+            className="mt-2 w-full rounded-xl bg-[#262626] px-4 py-2 text-sm text-[#3b82f6] font-medium hover:bg-[#333] transition-colors disabled:opacity-50 min-h-[44px]"
+          >
+            {estimating ? "推定中..." : "AIで栄養素を再推定"}
+          </button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
