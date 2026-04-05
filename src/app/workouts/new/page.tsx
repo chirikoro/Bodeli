@@ -1,4 +1,5 @@
 import { WorkoutForm } from "@/components/workout-form";
+import { RestTimer } from "@/components/rest-timer";
 import { NavBar } from "@/components/nav-bar";
 import Link from "next/link";
 
@@ -21,6 +22,7 @@ export default function NewWorkoutPage() {
         <WorkoutForm />
       </main>
 
+      <RestTimer />
       <NavBar />
     </div>
   );
