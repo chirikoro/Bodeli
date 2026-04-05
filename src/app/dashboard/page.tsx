@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { calculateFeedback } from "@/lib/feedback";
 import { FeedbackCard } from "@/components/feedback-card";
 import { NavBar } from "@/components/nav-bar";
+import { DeleteButton } from "@/components/delete-button";
 import Link from "next/link";
 import type { Meal, WorkoutSession, WorkoutSet, Profile } from "@/lib/types";
 
@@ -106,12 +107,25 @@ export default async function DashboardPage() {
                   key={meal.id}
                   className="rounded-xl bg-[#1a1a1a] border border-[#262626] p-3"
                 >
-                  <p className="text-sm text-[#f5f5f5]">{meal.description}</p>
-                  <div className="flex gap-3 mt-1 text-xs text-[#a3a3a3] tabular-nums">
-                    <span>P: {meal.protein_g ?? 0}g</span>
-                    <span>F: {meal.fat_g ?? 0}g</span>
-                    <span>C: {meal.carbs_g ?? 0}g</span>
-                    <span>{meal.calories ?? 0}kcal</span>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm text-[#f5f5f5]">{meal.description}</p>
+                      <div className="flex gap-3 mt-1 text-xs text-[#a3a3a3] tabular-nums">
+                        <span>P: {meal.protein_g ?? 0}g</span>
+                        <span>F: {meal.fat_g ?? 0}g</span>
+                        <span>C: {meal.carbs_g ?? 0}g</span>
+                        <span>{meal.calories ?? 0}kcal</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 ml-2 shrink-0">
+                      <Link
+                        href={`/meals/${meal.id}/edit`}
+                        className="text-xs text-[#3b82f6] min-w-[44px] min-h-[44px] flex items-center justify-center"
+                      >
+                        編集
+                      </Link>
+                      <DeleteButton table="meals" id={meal.id} />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -162,15 +176,28 @@ export default async function DashboardPage() {
                     key={session.id}
                     className="rounded-xl bg-[#1a1a1a] border border-[#262626] p-3"
                   >
-                    <p className="text-sm font-medium text-[#f5f5f5]">
-                      {session.template_name ?? "カスタム"}
-                    </p>
-                    <p className="text-xs text-[#a3a3a3] mt-1">
-                      {exercises.join("、")}
-                    </p>
-                    <p className="text-xs text-[#737373] mt-1 tabular-nums">
-                      総ボリューム: {volume.toLocaleString()}kg
-                    </p>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-[#f5f5f5]">
+                          {session.template_name ?? "カスタム"}
+                        </p>
+                        <p className="text-xs text-[#a3a3a3] mt-1">
+                          {exercises.join("、")}
+                        </p>
+                        <p className="text-xs text-[#737373] mt-1 tabular-nums">
+                          総ボリューム: {volume.toLocaleString()}kg
+                        </p>
+                      </div>
+                      <div className="flex gap-1 ml-2 shrink-0">
+                        <Link
+                          href={`/workouts/${session.id}/edit`}
+                          className="text-xs text-[#3b82f6] min-w-[44px] min-h-[44px] flex items-center justify-center"
+                        >
+                          編集
+                        </Link>
+                        <DeleteButton table="workout_sessions" id={session.id} />
+                      </div>
+                    </div>
                   </div>
                 );
               })}
