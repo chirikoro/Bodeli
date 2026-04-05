@@ -1,12 +1,15 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const authError = searchParams.get("error");
   const supabase = createClient();
 
   async function handleGoogleLogin() {
@@ -43,6 +46,16 @@ export default function LoginPage() {
             筋トレ × 食事を、ひとつに。
           </p>
         </div>
+
+        {authError && (
+          <div className="rounded-xl bg-[#262626] border border-[#f97316] p-3 text-center">
+            <p className="text-[#f97316] text-sm">
+              {authError === "expired"
+                ? "ログインリンクの有効期限が切れました。もう一度お試しください。"
+                : "ログインに失敗しました。もう一度お試しください。"}
+            </p>
+          </div>
+        )}
 
         <button
           onClick={handleGoogleLogin}
@@ -100,5 +113,13 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
