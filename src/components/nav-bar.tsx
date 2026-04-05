@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/dashboard", label: "ダッシュボード", icon: "🏠" },
+  { href: "/dashboard", label: "ホーム", icon: "🏠" },
   { href: "/meals", label: "食事", icon: "🍽" },
-  { href: "/workouts", label: "トレーニング", icon: "💪" },
+  { href: "/workouts", label: "筋トレ", icon: "💪" },
+  { href: "/settings", label: "設定", icon: "⚙️" },
 ] as const;
 
 export function NavBar() {
