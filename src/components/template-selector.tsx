@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { WorkoutTemplate } from "@/lib/types";
 
 export function TemplateSelector({
@@ -11,7 +12,15 @@ export function TemplateSelector({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs text-[#737373]">テンプレートを選択</p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-[#737373]">テンプレートを選択</p>
+        <Link
+          href="/workouts/templates"
+          className="text-xs text-[#3b82f6] hover:text-[#60a5fa] min-h-[44px] flex items-center"
+        >
+          テンプレート管理
+        </Link>
+      </div>
       <div className="grid grid-cols-2 gap-2">
         {templates.map((t) => (
           <button
