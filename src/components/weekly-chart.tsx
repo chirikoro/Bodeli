@@ -59,9 +59,10 @@ export function WeeklyChart({ data }: { data: DayData[] }) {
               }}
               itemStyle={{ color: "#f5f5f5" }}
               labelStyle={{ color: "#a3a3a3" }}
-              formatter={(value: number, name: string) => {
-                if (name === "ボリューム") return [`${value.toLocaleString()}kg`, name];
-                return [`${value}g`, name];
+              formatter={(value, name) => {
+                const v = Number(value);
+                if (name === "ボリューム") return [`${v.toLocaleString()}kg`, name];
+                return [`${v}g`, name];
               }}
             />
             <Legend
