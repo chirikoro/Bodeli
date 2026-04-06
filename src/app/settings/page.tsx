@@ -4,12 +4,13 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { NavBar } from "@/components/nav-bar";
-import { ACTIVITY_LABELS, calculateTDEE } from "@/lib/tdee";
-import type { Profile, ActivityLevel } from "@/lib/types";
+import { ACTIVITY_LABELS, GOAL_PHASE_LABELS, GOAL_PHASE_PRESETS, calculateTDEE } from "@/lib/tdee";
+import type { Profile, ActivityLevel, GoalPhase } from "@/lib/types";
 
 const ACTIVITY_OPTIONS: ActivityLevel[] = [
   "sedentary", "light", "moderate", "active", "very_active",
 ];
+const GOAL_OPTIONS: GoalPhase[] = ["bulk", "maintain", "cut"];
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -17,6 +18,9 @@ export default function SettingsPage() {
   const [heightCm, setHeightCm] = useState("");
   const [age, setAge] = useState("");
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>("moderate");
+  const [goalPhase, setGoalPhase] = useState<GoalPhase>("maintain");
+  const [fatPct, setFatPct] = useState("25");
+  const [carbsPct, setCarbsPct] = useState("50");
   const [proteinTarget, setProteinTarget] = useState("2.0");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -47,6 +51,9 @@ export default function SettingsPage() {
         setHeightCm(p.height_cm ? String(p.height_cm) : "");
         setAge(p.age ? String(p.age) : "");
         setActivityLevel(p.activity_level ?? "moderate");
+        setGoalPhase(p.goal_phase ?? "maintain");
+        setFatPct(String(p.fat_target_pct ?? 25));
+        setCarbsPct(String(p.carbs_target_pct ?? 50));
         setProteinTarget(String(p.protein_target_per_kg));
       }
     }
@@ -70,6 +77,9 @@ export default function SettingsPage() {
       height_cm: heightCm ? parseFloat(heightCm) : null,
       age: age ? parseInt(age) : null,
       activity_level: activityLevel,
+      goal_phase: goalPhase,
+      fat_target_pct: parseInt(fatPct) || 25,
+      carbs_target_pct: parseInt(carbsPct) || 50,
       protein_target_per_kg: parseFloat(proteinTarget) || 2.0,
     };
 
@@ -173,6 +183,35 @@ export default function SettingsPage() {
                 activityLevel
               ).toLocaleString()} kcal/日
             </p>
+          </div>
+
+          <div>
+            <label className="text-xs text-[#737373] mb-2 block">目標フェーズ</label>
+            <div className="flex gap-2">
+              {GOAL_OPTIONS.map((phase) => (
+                <button
+                  key={phase}
+                  type="button"
+                  onClick={() => {
+                    setGoalPhase(phase);
+                    const preset = GOAL_PHASE_PRESETS[phase];
+                    setProteinTarget(String(preset.protein_per_kg));
+                    setFatPct(String(preset.fat_pct));
+                    setCarbsPct(String(preset.carbs_pct));
+                  }}
+                  className={`flex-1 rounded-lg px-3 py-2 text-center text-xs transition-colors min-h-[44px] ${
+                    goalPhase === phase
+                      ? phase === "bulk" ? "bg-[#3b82f6] text-white"
+                        : phase === "cut" ? "bg-[#f97316] text-white"
+                        : "bg-[#22c55e] text-white"
+                      : "bg-[#262626] border border-[#333] text-[#a3a3a3]"
+                  }`}
+                >
+                  <span className="block font-medium">{GOAL_PHASE_LABELS[phase]}</span>
+                  <span className="block mt-0.5 opacity-80">{GOAL_PHASE_PRESETS[phase].description}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
