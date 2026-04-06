@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { calculateFeedback } from "@/lib/feedback";
+import { calculate1RM, calculateTDEE } from "@/lib/tdee";
 import { FeedbackCard } from "@/components/feedback-card";
 import { WeeklyChart } from "@/components/weekly-chart";
 import { NavBar } from "@/components/nav-bar";
@@ -135,6 +136,46 @@ export default async function DashboardPage() {
         {/* Feedback Card */}
         <FeedbackCard feedback={feedback} />
 
+        {/* Calorie Balance Card */}
+        {meals.length > 0 && (
+          <div className="rounded-xl bg-[#1a1a1a] border border-[#262626] p-3">
+            <p className="text-xs text-[#a3a3a3] mb-2">カロリー収支</p>
+            {(() => {
+              const tdee = calculateTDEE(
+                profile?.weight_kg ?? 70,
+                profile?.height_cm ?? null,
+                profile?.age ?? null,
+                profile?.activity_level ?? "moderate"
+              );
+              const totalCal = meals.reduce((sum, m) => sum + (m.calories ?? 0), 0);
+              const balance = Math.round(totalCal - tdee);
+              return (
+                <div className="flex items-center justify-between">
+                  <div className="text-center flex-1">
+                    <p className="text-xs text-[#737373]">摂取</p>
+                    <p className="text-lg font-semibold text-[#f5f5f5] tabular-nums">{Math.round(totalCal)}</p>
+                    <p className="text-xs text-[#737373]">kcal</p>
+                  </div>
+                  <span className="text-[#737373]">-</span>
+                  <div className="text-center flex-1">
+                    <p className="text-xs text-[#737373]">消費目安</p>
+                    <p className="text-lg font-semibold text-[#f5f5f5] tabular-nums">{tdee}</p>
+                    <p className="text-xs text-[#737373]">kcal</p>
+                  </div>
+                  <span className="text-[#737373]">=</span>
+                  <div className="text-center flex-1">
+                    <p className="text-xs text-[#737373]">収支</p>
+                    <p className={`text-lg font-semibold tabular-nums ${balance >= 0 ? "text-[#3b82f6]" : "text-[#f97316]"}`}>
+                      {balance >= 0 ? "+" : ""}{balance}
+                    </p>
+                    <p className="text-xs text-[#737373]">kcal</p>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
         {/* Weekly Chart */}
         <WeeklyChart data={weeklyData} />
 
@@ -229,9 +270,15 @@ export default async function DashboardPage() {
                   (sum, s) => sum + s.weight_kg * s.reps,
                   0
                 );
-                const exercises = [
-                  ...new Set(sessionSets.map((s) => s.exercise_name)),
-                ];
+                // Group by exercise with best set (highest 1RM)
+                const exerciseMap = new Map<string, { weight: number; reps: number; rm: number }>();
+                for (const s of sessionSets) {
+                  const rm = calculate1RM(s.weight_kg, s.reps);
+                  const current = exerciseMap.get(s.exercise_name);
+                  if (!current || rm > current.rm) {
+                    exerciseMap.set(s.exercise_name, { weight: s.weight_kg, reps: s.reps, rm });
+                  }
+                }
                 return (
                   <div
                     key={session.id}
@@ -242,9 +289,13 @@ export default async function DashboardPage() {
                         <p className="text-sm font-medium text-[#f5f5f5]">
                           {session.template_name ?? "カスタム"}
                         </p>
-                        <p className="text-xs text-[#a3a3a3] mt-1">
-                          {exercises.join("、")}
-                        </p>
+                        <div className="mt-1 space-y-0.5">
+                          {[...exerciseMap.entries()].map(([name, best]) => (
+                            <p key={name} className="text-xs text-[#a3a3a3] tabular-nums">
+                              {name}: {best.weight}kg×{best.reps} <span className="text-[#737373]">(1RM {best.rm}kg)</span>
+                            </p>
+                          ))}
+                        </div>
                         <p className="text-xs text-[#737373] mt-1 tabular-nums">
                           総ボリューム: {volume.toLocaleString()}kg
                         </p>
