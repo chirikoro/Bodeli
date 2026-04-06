@@ -4,12 +4,19 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { NavBar } from "@/components/nav-bar";
-import type { Profile } from "@/lib/types";
+import { ACTIVITY_LABELS, calculateTDEE } from "@/lib/tdee";
+import type { Profile, ActivityLevel } from "@/lib/types";
+
+const ACTIVITY_OPTIONS: ActivityLevel[] = [
+  "sedentary", "light", "moderate", "active", "very_active",
+];
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [weightKg, setWeightKg] = useState("");
   const [heightCm, setHeightCm] = useState("");
+  const [age, setAge] = useState("");
+  const [activityLevel, setActivityLevel] = useState<ActivityLevel>("moderate");
   const [proteinTarget, setProteinTarget] = useState("2.0");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -38,6 +45,8 @@ export default function SettingsPage() {
         setProfile(p);
         setWeightKg(String(p.weight_kg));
         setHeightCm(p.height_cm ? String(p.height_cm) : "");
+        setAge(p.age ? String(p.age) : "");
+        setActivityLevel(p.activity_level ?? "moderate");
         setProteinTarget(String(p.protein_target_per_kg));
       }
     }
@@ -56,9 +65,11 @@ export default function SettingsPage() {
     setError("");
     setSaved(false);
 
-    const updates: Record<string, number | null> = {
+    const updates: Record<string, number | string | null> = {
       weight_kg: weight,
       height_cm: heightCm ? parseFloat(heightCm) : null,
+      age: age ? parseInt(age) : null,
+      activity_level: activityLevel,
       protein_target_per_kg: parseFloat(proteinTarget) || 2.0,
     };
 
@@ -123,6 +134,45 @@ export default function SettingsPage() {
               placeholder="任意"
               className="w-full mt-1 rounded-lg bg-[#262626] border border-[#333] px-3 py-2 text-sm text-[#f5f5f5] placeholder-[#737373] tabular-nums min-h-[44px]"
             />
+          </div>
+
+          <div>
+            <label className="text-xs text-[#737373]">年齢</label>
+            <input
+              type="number"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="任意"
+              className="w-full mt-1 rounded-lg bg-[#262626] border border-[#333] px-3 py-2 text-sm text-[#f5f5f5] placeholder-[#737373] tabular-nums min-h-[44px]"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-[#737373] mb-2 block">生活強度</label>
+            <div className="space-y-1">
+              {ACTIVITY_OPTIONS.map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setActivityLevel(level)}
+                  className={`w-full rounded-lg px-3 py-2 text-left text-xs transition-colors min-h-[44px] ${
+                    activityLevel === level
+                      ? "bg-[#22c55e] text-white"
+                      : "bg-[#262626] border border-[#333] text-[#a3a3a3]"
+                  }`}
+                >
+                  {ACTIVITY_LABELS[level]}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-[#737373] mt-2">
+              推定消費カロリー: {calculateTDEE(
+                parseFloat(weightKg) || 70,
+                heightCm ? parseFloat(heightCm) : null,
+                age ? parseInt(age) : null,
+                activityLevel
+              ).toLocaleString()} kcal/日
+            </p>
           </div>
 
           <div>

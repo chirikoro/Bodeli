@@ -3,10 +3,22 @@
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ACTIVITY_LABELS } from "@/lib/tdee";
+import type { ActivityLevel } from "@/lib/types";
+
+const ACTIVITY_OPTIONS: ActivityLevel[] = [
+  "sedentary",
+  "light",
+  "moderate",
+  "active",
+  "very_active",
+];
 
 export default function OnboardingPage() {
   const [weightKg, setWeightKg] = useState("");
   const [heightCm, setHeightCm] = useState("");
+  const [age, setAge] = useState("");
+  const [activityLevel, setActivityLevel] = useState<ActivityLevel>("moderate");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -35,6 +47,8 @@ export default function OnboardingPage() {
       id: user.id,
       weight_kg: weight,
       height_cm: heightCm ? parseFloat(heightCm) : null,
+      age: age ? parseInt(age) : null,
+      activity_level: activityLevel,
       display_name: user.user_metadata?.full_name || null,
     });
 
@@ -59,10 +73,7 @@ export default function OnboardingPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label
-              htmlFor="weight"
-              className="block text-sm text-[#a3a3a3] mb-1"
-            >
+            <label htmlFor="weight" className="block text-sm text-[#a3a3a3] mb-1">
               体重 (kg) <span className="text-[#f97316]">*</span>
             </label>
             <input
@@ -80,10 +91,7 @@ export default function OnboardingPage() {
           </div>
 
           <div>
-            <label
-              htmlFor="height"
-              className="block text-sm text-[#a3a3a3] mb-1"
-            >
+            <label htmlFor="height" className="block text-sm text-[#a3a3a3] mb-1">
               身長 (cm) <span className="text-[#737373]">任意</span>
             </label>
             <input
@@ -99,9 +107,45 @@ export default function OnboardingPage() {
             />
           </div>
 
-          {error && (
-            <p className="text-[#f97316] text-sm">{error}</p>
-          )}
+          <div>
+            <label htmlFor="age" className="block text-sm text-[#a3a3a3] mb-1">
+              年齢 <span className="text-[#737373]">任意</span>
+            </label>
+            <input
+              id="age"
+              type="number"
+              min="10"
+              max="100"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="25"
+              className="w-full rounded-xl bg-[#1a1a1a] border border-[#262626] px-4 py-3 text-[#f5f5f5] placeholder-[#737373] focus:outline-none focus:border-[#3b82f6] min-h-[44px] tabular-nums"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-[#a3a3a3] mb-2">
+              生活強度 <span className="text-[#f97316]">*</span>
+            </label>
+            <div className="space-y-2">
+              {ACTIVITY_OPTIONS.map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setActivityLevel(level)}
+                  className={`w-full rounded-lg px-4 py-3 text-left text-sm transition-colors min-h-[44px] ${
+                    activityLevel === level
+                      ? "bg-[#22c55e] text-white"
+                      : "bg-[#1a1a1a] border border-[#262626] text-[#a3a3a3] hover:bg-[#262626]"
+                  }`}
+                >
+                  {ACTIVITY_LABELS[level]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && <p className="text-[#f97316] text-sm">{error}</p>}
 
           <button
             type="submit"

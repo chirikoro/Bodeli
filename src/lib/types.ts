@@ -1,9 +1,13 @@
+export type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "very_active";
+
 export type Profile = {
   id: string;
   display_name: string | null;
   weight_kg: number;
   height_cm: number | null;
   protein_target_per_kg: number;
+  activity_level: ActivityLevel;
+  age: number | null;
   created_at: string;
   updated_at: string;
 };
