@@ -139,12 +139,29 @@ export function WorkoutForm() {
   }
 
   // Group sets by exercise for display
-  const exercises = sets.reduce<Record<string, number[]>>((acc, s, i) => {
-    const name = s.exercise_name || `種目${i + 1}`;
-    if (!acc[name]) acc[name] = [];
-    acc[name].push(i);
-    return acc;
-  }, {});
+  // Use stable group keys to avoid re-mounting inputs on name change
+  const exercises: { key: string; name: string; indices: number[] }[] = [];
+  for (let i = 0; i < sets.length; i++) {
+    const s = sets[i];
+    const displayName = s.exercise_name || `種目${i + 1}`;
+    // Template sets group by exercise_name; user-added sets each get their own group
+    if (s.isFromTemplate) {
+      const existing = exercises.find((g) => g.name === s.exercise_name && sets[g.indices[0]]?.isFromTemplate);
+      if (existing) {
+        existing.indices.push(i);
+      } else {
+        exercises.push({ key: `tmpl-${s.exercise_name}`, name: displayName, indices: [i] });
+      }
+    } else {
+      // Each non-template set is its own group with a stable index-based key
+      const lastGroup = exercises[exercises.length - 1];
+      if (lastGroup && !sets[lastGroup.indices[0]]?.isFromTemplate && lastGroup.name === displayName) {
+        lastGroup.indices.push(i);
+      } else {
+        exercises.push({ key: `custom-${i}`, name: displayName, indices: [i] });
+      }
+    }
+  }
 
   // Template selection screen
   if (selectedTemplate === undefined) {
@@ -167,13 +184,13 @@ export function WorkoutForm() {
       </div>
 
       {/* Sets grouped by exercise */}
-      {Object.entries(exercises).map(([exerciseName, indices]) => (
-        <div key={exerciseName} className="rounded-xl bg-[#1a1a1a] border border-[#262626] p-3 space-y-2">
-          {sets[indices[0]]?.isFromTemplate ? (
-            <p className="text-sm font-medium text-[#f5f5f5]">{exerciseName}</p>
+      {exercises.map((group) => (
+        <div key={group.key} className="rounded-xl bg-[#1a1a1a] border border-[#262626] p-3 space-y-2">
+          {sets[group.indices[0]]?.isFromTemplate ? (
+            <p className="text-sm font-medium text-[#f5f5f5]">{group.name}</p>
           ) : null}
 
-          {indices.map((idx) => (
+          {group.indices.map((idx) => (
             <div key={idx} className="flex items-center gap-2">
               {!sets[idx].isFromTemplate && (
                 <input
@@ -211,8 +228,8 @@ export function WorkoutForm() {
 
           <button
             onClick={() => addSet(
-              sets[indices[0]]?.isFromTemplate ? exerciseName : "",
-              sets[indices[0]]?.isFromTemplate ?? false
+              sets[group.indices[0]]?.isFromTemplate ? group.name : "",
+              sets[group.indices[0]]?.isFromTemplate ?? false
             )}
             className="text-xs text-[#3b82f6] hover:text-[#60a5fa] min-h-[44px] flex items-center"
           >
