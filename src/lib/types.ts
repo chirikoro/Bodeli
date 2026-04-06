@@ -1,4 +1,5 @@
 export type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "very_active";
+export type GoalPhase = "bulk" | "cut" | "maintain";
 
 export type Profile = {
   id: string;
@@ -7,6 +8,9 @@ export type Profile = {
   height_cm: number | null;
   protein_target_per_kg: number;
   activity_level: ActivityLevel;
+  goal_phase: GoalPhase;
+  fat_target_pct: number;
+  carbs_target_pct: number;
   age: number | null;
   created_at: string;
   updated_at: string;
