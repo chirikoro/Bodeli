@@ -169,7 +169,7 @@ export function WorkoutForm() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-hidden">
       {/* Template name */}
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-[#f5f5f5]">

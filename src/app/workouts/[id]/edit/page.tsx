@@ -135,38 +135,37 @@ export default function EditWorkoutPage() {
 
       <main className="px-4 space-y-4">
         {sets.map((set, idx) => (
-          <div
-            key={idx}
-            className="flex items-center gap-2"
-          >
+          <div key={idx} className="space-y-1">
             <input
               type="text"
               value={set.exercise_name}
               onChange={(e) => updateSet(idx, "exercise_name", e.target.value)}
               placeholder="種目名"
-              className="flex-1 rounded-lg bg-[#262626] border border-[#333] px-3 py-2 text-sm text-[#f5f5f5] placeholder-[#737373] min-h-[44px]"
+              className="w-full rounded-lg bg-[#262626] border border-[#333] px-3 py-2 text-sm text-[#f5f5f5] placeholder-[#737373] min-h-[44px]"
             />
-            <input
-              type="number"
-              value={set.weight_kg}
-              onChange={(e) => updateSet(idx, "weight_kg", e.target.value)}
-              placeholder="kg"
-              className="w-20 rounded-lg bg-[#262626] border border-[#333] px-3 py-2 text-sm text-[#f5f5f5] text-center tabular-nums min-h-[44px]"
-            />
-            <span className="text-[#737373] text-xs">×</span>
-            <input
-              type="number"
-              value={set.reps}
-              onChange={(e) => updateSet(idx, "reps", e.target.value)}
-              placeholder="回"
-              className="w-16 rounded-lg bg-[#262626] border border-[#333] px-3 py-2 text-sm text-[#f5f5f5] text-center tabular-nums min-h-[44px]"
-            />
-            <button
-              onClick={() => removeSet(idx)}
-              className="text-[#737373] hover:text-[#f97316] min-w-[44px] min-h-[44px] flex items-center justify-center"
-            >
-              ×
-            </button>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={set.weight_kg}
+                onChange={(e) => updateSet(idx, "weight_kg", e.target.value)}
+                placeholder="kg"
+                className="flex-1 rounded-lg bg-[#262626] border border-[#333] px-3 py-2 text-sm text-[#f5f5f5] text-center tabular-nums min-h-[44px]"
+              />
+              <span className="text-[#737373] text-xs">×</span>
+              <input
+                type="number"
+                value={set.reps}
+                onChange={(e) => updateSet(idx, "reps", e.target.value)}
+                placeholder="回"
+                className="flex-1 rounded-lg bg-[#262626] border border-[#333] px-3 py-2 text-sm text-[#f5f5f5] text-center tabular-nums min-h-[44px]"
+              />
+              <button
+                onClick={() => removeSet(idx)}
+                className="text-[#737373] hover:text-[#f97316] min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0"
+              >
+                ×
+              </button>
+            </div>
           </div>
         ))}
 
