@@ -169,7 +169,7 @@ export function WorkoutForm() {
   }
 
   return (
-    <div className="space-y-4 overflow-hidden">
+    <div className="space-y-4">
       {/* Template name */}
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-[#f5f5f5]">
@@ -202,24 +202,26 @@ export function WorkoutForm() {
                 />
               )}
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={sets[idx].weight_kg}
-                  onChange={(e) => updateSet(idx, "weight_kg", e.target.value)}
-                  placeholder="kg"
-                  className="flex-1 rounded-lg bg-[#262626] border border-[#333] px-3 py-2 text-sm text-[#f5f5f5] text-center tabular-nums min-h-[44px]"
-                />
-                <span className="text-[#737373] text-xs">×</span>
-                <input
-                  type="number"
-                  value={sets[idx].reps}
-                  onChange={(e) => updateSet(idx, "reps", e.target.value)}
-                  placeholder="回"
-                  className="flex-1 rounded-lg bg-[#262626] border border-[#333] px-3 py-2 text-sm text-[#f5f5f5] text-center tabular-nums min-h-[44px]"
-                />
+                <div className="flex items-center gap-1 flex-1 min-w-0">
+                  <input
+                    type="number"
+                    value={sets[idx].weight_kg}
+                    onChange={(e) => updateSet(idx, "weight_kg", e.target.value)}
+                    placeholder="kg"
+                    className="w-0 flex-1 rounded-lg bg-[#262626] border border-[#333] px-2 py-2 text-sm text-[#f5f5f5] text-center tabular-nums min-h-[44px]"
+                  />
+                  <span className="text-[#737373] text-xs shrink-0">×</span>
+                  <input
+                    type="number"
+                    value={sets[idx].reps}
+                    onChange={(e) => updateSet(idx, "reps", e.target.value)}
+                    placeholder="回"
+                    className="w-0 flex-1 rounded-lg bg-[#262626] border border-[#333] px-2 py-2 text-sm text-[#f5f5f5] text-center tabular-nums min-h-[44px]"
+                  />
+                </div>
                 <button
                   onClick={() => removeSet(idx)}
-                  className="text-[#737373] hover:text-[#f97316] min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0"
+                  className="text-[#737373] hover:text-[#f97316] w-8 min-h-[44px] flex items-center justify-center shrink-0"
                   aria-label="セットを削除"
                 >
                   ×
