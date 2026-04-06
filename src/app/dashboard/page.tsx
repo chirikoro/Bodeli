@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { calculateFeedback } from "@/lib/feedback";
-import { calculate1RM, calculateTDEE } from "@/lib/tdee";
+import { calculate1RM, calculateTDEE, GOAL_PHASE_PRESETS } from "@/lib/tdee";
 import { FeedbackCard } from "@/components/feedback-card";
 import { WeeklyChart } from "@/components/weekly-chart";
 import { NavBar } from "@/components/nav-bar";
@@ -136,41 +136,88 @@ export default async function DashboardPage() {
         {/* Feedback Card */}
         <FeedbackCard feedback={feedback} />
 
-        {/* Calorie Balance Card */}
+        {/* Calorie & PFC Balance Card */}
         {meals.length > 0 && (
-          <div className="rounded-xl bg-[#1a1a1a] border border-[#262626] p-3">
-            <p className="text-xs text-[#a3a3a3] mb-2">カロリー収支</p>
+          <div className="rounded-xl bg-[#1a1a1a] border border-[#262626] p-3 space-y-3">
             {(() => {
+              const phase = profile?.goal_phase ?? "maintain";
+              const preset = GOAL_PHASE_PRESETS[phase];
               const tdee = calculateTDEE(
                 profile?.weight_kg ?? 70,
                 profile?.height_cm ?? null,
                 profile?.age ?? null,
                 profile?.activity_level ?? "moderate"
               );
-              const totalCal = meals.reduce((sum, m) => sum + (m.calories ?? 0), 0);
-              const balance = Math.round(totalCal - tdee);
+              const targetCal = Math.round(tdee * preset.calorie_adjustment);
+              const totalCal = Math.round(meals.reduce((sum, m) => sum + (m.calories ?? 0), 0));
+              const balance = totalCal - targetCal;
+
+              const proteinPerKg = profile?.protein_target_per_kg ?? preset.protein_per_kg;
+              const targetProtein = Math.round((profile?.weight_kg ?? 70) * proteinPerKg);
+              const targetFat = Math.round((targetCal * (profile?.fat_target_pct ?? preset.fat_pct) / 100) / 9);
+              const targetCarbs = Math.round((targetCal * (profile?.carbs_target_pct ?? preset.carbs_pct) / 100) / 4);
+
+              const actualProtein = Math.round(meals.reduce((sum, m) => sum + (m.protein_g ?? 0), 0));
+              const actualFat = Math.round(meals.reduce((sum, m) => sum + (m.fat_g ?? 0), 0));
+              const actualCarbs = Math.round(meals.reduce((sum, m) => sum + (m.carbs_g ?? 0), 0));
+
+              const pfcItems = [
+                { label: "P タンパク質", actual: actualProtein, target: targetProtein, unit: "g", color: "#22c55e" },
+                { label: "F 脂質", actual: actualFat, target: targetFat, unit: "g", color: "#eab308" },
+                { label: "C 炭水化物", actual: actualCarbs, target: targetCarbs, unit: "g", color: "#3b82f6" },
+              ];
+
               return (
-                <div className="flex items-center justify-between">
-                  <div className="text-center flex-1">
-                    <p className="text-xs text-[#737373]">摂取</p>
-                    <p className="text-lg font-semibold text-[#f5f5f5] tabular-nums">{Math.round(totalCal)}</p>
-                    <p className="text-xs text-[#737373]">kcal</p>
+                <>
+                  {/* Calorie row */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs text-[#a3a3a3]">カロリー</p>
+                      <p className="text-xs tabular-nums text-[#a3a3a3]">
+                        <span className="text-[#f5f5f5] font-semibold">{totalCal}</span> / {targetCal} kcal
+                        <span className={`ml-1 ${balance >= 0 ? "text-[#3b82f6]" : "text-[#f97316]"}`}>
+                          ({balance >= 0 ? "+" : ""}{balance})
+                        </span>
+                      </p>
+                    </div>
+                    <div className="w-full h-2 bg-[#262626] rounded-full">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${Math.min((totalCal / targetCal) * 100, 100)}%`,
+                          backgroundColor: Math.abs(balance) < targetCal * 0.1 ? "#22c55e" : balance > 0 ? "#3b82f6" : "#f97316",
+                        }}
+                      />
+                    </div>
                   </div>
-                  <span className="text-[#737373]">-</span>
-                  <div className="text-center flex-1">
-                    <p className="text-xs text-[#737373]">消費目安</p>
-                    <p className="text-lg font-semibold text-[#f5f5f5] tabular-nums">{tdee}</p>
-                    <p className="text-xs text-[#737373]">kcal</p>
-                  </div>
-                  <span className="text-[#737373]">=</span>
-                  <div className="text-center flex-1">
-                    <p className="text-xs text-[#737373]">収支</p>
-                    <p className={`text-lg font-semibold tabular-nums ${balance >= 0 ? "text-[#3b82f6]" : "text-[#f97316]"}`}>
-                      {balance >= 0 ? "+" : ""}{balance}
-                    </p>
-                    <p className="text-xs text-[#737373]">kcal</p>
-                  </div>
-                </div>
+
+                  {/* PFC bars */}
+                  {pfcItems.map((item) => {
+                    const pct = item.target > 0 ? Math.min((item.actual / item.target) * 100, 100) : 0;
+                    const diff = item.actual - item.target;
+                    return (
+                      <div key={item.label}>
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs text-[#a3a3a3]">{item.label}</p>
+                          <p className="text-xs tabular-nums text-[#a3a3a3]">
+                            <span className="text-[#f5f5f5] font-semibold">{item.actual}</span> / {item.target}{item.unit}
+                            {diff !== 0 && (
+                              <span className={`ml-1 ${diff > 0 ? "text-[#f97316]" : "text-[#737373]"}`}>
+                                ({diff > 0 ? "+" : ""}{diff})
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="w-full h-2 bg-[#262626] rounded-full">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${pct}%`, backgroundColor: item.color }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
               );
             })()}
           </div>
