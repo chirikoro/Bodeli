@@ -34,16 +34,8 @@ export function RestTimer() {
   }, []);
 
   const adjust = useCallback((delta: number) => {
-    setRemaining((prev) => {
-      const next = prev + delta;
-      if (next < 0) return 0;
-      return next;
-    });
-    setTotal((prev) => {
-      const next = prev + delta;
-      if (next < 0) return 0;
-      return next;
-    });
+    setRemaining((prev) => Math.max(0, prev + delta));
+    setTotal((prev) => Math.max(0, prev + delta));
   }, []);
 
   useEffect(() => {
@@ -71,90 +63,87 @@ export function RestTimer() {
   const seconds = remaining % 60;
   const progress = total > 0 ? ((total - remaining) / total) * 100 : 0;
 
+  // Collapsed: small button at top right
   if (!isOpen) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 right-4 z-40 w-12 h-12 rounded-full bg-[#262626] border border-[#333] flex items-center justify-center shadow-lg"
+        className="fixed top-2 right-4 z-40 h-10 px-3 rounded-full bg-[#262626] border border-[#333] flex items-center gap-1.5 shadow-lg"
       >
-        <span className="text-lg">⏱</span>
+        <span className="text-sm">⏱</span>
+        {running && (
+          <span className="text-xs text-[#f5f5f5] tabular-nums">
+            {minutes}:{seconds.toString().padStart(2, "0")}
+          </span>
+        )}
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 z-40 rounded-xl bg-[#1a1a1a] border border-[#262626] p-4 shadow-lg">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold text-[#f5f5f5]">レストタイマー</p>
+    <div className="fixed top-0 left-0 right-0 z-40 bg-[#1a1a1a] border-b border-[#262626] px-4 py-3 shadow-lg safe-area-pt">
+      {/* Header row: timer + controls */}
+      <div className="flex items-center gap-3">
+        <p className="text-2xl font-bold text-[#f5f5f5] tabular-nums shrink-0">
+          {minutes}:{seconds.toString().padStart(2, "0")}
+        </p>
+
+        {running ? (
+          <>
+            {/* Progress bar */}
+            <div className="flex-1 h-1.5 bg-[#262626] rounded-full">
+              <div
+                className="h-full bg-[#3b82f6] rounded-full transition-all duration-1000"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <button
+              onClick={() => adjust(-10)}
+              className="text-xs text-[#a3a3a3] px-2 py-1 rounded bg-[#262626] min-h-[36px]"
+            >
+              -10s
+            </button>
+            <button
+              onClick={() => adjust(10)}
+              className="text-xs text-[#a3a3a3] px-2 py-1 rounded bg-[#262626] min-h-[36px]"
+            >
+              +10s
+            </button>
+            <button
+              onClick={stop}
+              className="text-xs text-[#f97316] px-2 py-1 rounded bg-[#262626] min-h-[36px]"
+            >
+              停止
+            </button>
+          </>
+        ) : (
+          <>
+            {remaining === 0 && total > 0 && (
+              <span className="text-[#22c55e] text-xs">完了!</span>
+            )}
+            <div className="flex-1" />
+            {PRESETS.map((p) => (
+              <button
+                key={p.seconds}
+                onClick={() => start(p.seconds)}
+                className="text-xs text-[#a3a3a3] px-3 py-1 rounded bg-[#262626] hover:bg-[#333] min-h-[36px]"
+              >
+                {p.label}
+              </button>
+            ))}
+          </>
+        )}
+
         <button
           onClick={() => {
             if (!running) stop();
             setIsOpen(false);
           }}
-          className="text-[#737373] text-xs min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="text-[#737373] text-xs ml-1 min-h-[36px]"
         >
-          閉じる
+          ✕
         </button>
       </div>
-
-      {/* Timer display */}
-      <div className="text-center mb-3">
-        <p className="text-4xl font-bold text-[#f5f5f5] tabular-nums">
-          {minutes}:{seconds.toString().padStart(2, "0")}
-        </p>
-        {remaining === 0 && total > 0 && (
-          <p className="text-[#22c55e] text-sm mt-1">タイムアップ!</p>
-        )}
-      </div>
-
-      {/* Progress bar */}
-      {running && total > 0 && (
-        <div className="w-full h-1.5 bg-[#262626] rounded-full mb-3">
-          <div
-            className="h-full bg-[#3b82f6] rounded-full transition-all duration-1000"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      )}
-
-      {/* Adjust buttons (when running) */}
-      {running && (
-        <div className="flex gap-2 mb-3">
-          <button
-            onClick={() => adjust(-10)}
-            className="flex-1 rounded-lg bg-[#262626] py-2 text-sm text-[#a3a3a3] min-h-[44px]"
-          >
-            -10秒
-          </button>
-          <button
-            onClick={stop}
-            className="flex-1 rounded-lg bg-[#262626] py-2 text-sm text-[#f97316] font-medium min-h-[44px]"
-          >
-            停止
-          </button>
-          <button
-            onClick={() => adjust(10)}
-            className="flex-1 rounded-lg bg-[#262626] py-2 text-sm text-[#a3a3a3] min-h-[44px]"
-          >
-            +10秒
-          </button>
-        </div>
-      )}
-
-      {/* Preset buttons (when not running) */}
-      {!running && (
-        <div className="flex gap-2">
-          {PRESETS.map((p) => (
-            <button
-              key={p.seconds}
-              onClick={() => start(p.seconds)}
-              className="flex-1 rounded-lg bg-[#262626] py-3 text-sm text-[#a3a3a3] hover:bg-[#333] hover:text-[#f5f5f5] transition-colors min-h-[44px]"
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

@@ -25,9 +25,13 @@ export function DeleteButton({
 
     await supabase.from(table).delete().eq("id", id);
 
+    const scrollY = window.scrollY;
     setDeleting(false);
     setConfirming(false);
     router.refresh();
+    requestAnimationFrame(() => {
+      window.scrollTo(0, scrollY);
+    });
   }
 
   if (confirming) {

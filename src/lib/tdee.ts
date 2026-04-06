@@ -1,4 +1,4 @@
-import type { ActivityLevel } from "./types";
+import type { ActivityLevel, GoalPhase } from "./types";
 
 // Activity level multipliers (Harris-Benedict)
 const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
@@ -41,6 +41,43 @@ export function calculateTDEE(
   const bmr = calculateBMR(weightKg, heightCm, age);
   return Math.round(bmr * ACTIVITY_MULTIPLIERS[activityLevel]);
 }
+
+// Goal phase presets for PFC balance
+export const GOAL_PHASE_LABELS: Record<GoalPhase, string> = {
+  bulk: "増量期（バルク）",
+  cut: "減量期（カット）",
+  maintain: "維持期",
+};
+
+export const GOAL_PHASE_PRESETS: Record<GoalPhase, {
+  protein_per_kg: number;
+  fat_pct: number;
+  carbs_pct: number;
+  calorie_adjustment: number; // multiplier on TDEE
+  description: string;
+}> = {
+  bulk: {
+    protein_per_kg: 2.0,
+    fat_pct: 25,
+    carbs_pct: 55,
+    calorie_adjustment: 1.15, // +15%
+    description: "カロリー+15%、炭水化物多め",
+  },
+  cut: {
+    protein_per_kg: 2.5,
+    fat_pct: 25,
+    carbs_pct: 35,
+    calorie_adjustment: 0.80, // -20%
+    description: "カロリー-20%、高タンパク",
+  },
+  maintain: {
+    protein_per_kg: 2.0,
+    fat_pct: 25,
+    carbs_pct: 50,
+    calorie_adjustment: 1.0,
+    description: "バランス型",
+  },
+};
 
 // 1RM calculation (Epley formula)
 export function calculate1RM(weightKg: number, reps: number): number {
