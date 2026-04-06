@@ -123,7 +123,11 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#0f0f0f] pb-20">
       <header className="px-4 pt-6 pb-2">
-        <h1 className="text-lg font-bold text-[#f5f5f5]">ダッシュボード</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-bold text-[#f5f5f5]">
+            {profile?.display_name ? `${profile.display_name}さん` : "ダッシュボード"}
+          </h1>
+        </div>
         <p className="text-xs text-[#737373]">{today}</p>
       </header>
 

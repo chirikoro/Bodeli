@@ -40,7 +40,8 @@ export function WeeklyChart({ data }: { data: DayData[] }) {
               tick={{ fontSize: 10, fill: "#737373" }}
               axisLine={false}
               tickLine={false}
-              width={35}
+              width={45}
+              label={{ value: "kg", position: "top", offset: 5, style: { fontSize: 10, fill: "#3b82f6" } }}
             />
             <YAxis
               yAxisId="protein"
@@ -48,7 +49,8 @@ export function WeeklyChart({ data }: { data: DayData[] }) {
               tick={{ fontSize: 10, fill: "#737373" }}
               axisLine={false}
               tickLine={false}
-              width={35}
+              width={40}
+              label={{ value: "g", position: "top", offset: 5, style: { fontSize: 10, fill: "#22c55e" } }}
             />
             <Tooltip
               contentStyle={{
