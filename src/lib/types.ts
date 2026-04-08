@@ -67,6 +67,18 @@ export type WorkoutTemplate = {
   created_at: string;
 };
 
+export type SavedRecipe = {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string;
+  calories: number | null;
+  protein_g: number | null;
+  fat_g: number | null;
+  carbs_g: number | null;
+  created_at: string;
+};
+
 export type NutritionEstimate = {
   calories: number;
   protein_g: number;

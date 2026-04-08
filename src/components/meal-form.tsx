@@ -1,9 +1,10 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import type { NutritionEstimate, Meal } from "@/lib/types";
+import { SaveRecipeButton } from "@/components/save-recipe-button";
+import type { NutritionEstimate, Meal, SavedRecipe } from "@/lib/types";
 
 export function MealForm() {
   const [description, setDescription] = useState("");
@@ -17,39 +18,62 @@ export function MealForm() {
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [recentMeals, setRecentMeals] = useState<Meal[]>([]);
+  const [recipes, setRecipes] = useState<SavedRecipe[]>([]);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
-  // Load recent meals for quick re-entry
+  // Load recent meals and saved recipes
   useEffect(() => {
-    async function loadRecent() {
+    async function loadData() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data } = await supabase
-        .from("meals")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      const [mealsRes, recipesRes] = await Promise.all([
+        supabase
+          .from("meals")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("saved_recipes")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
+      ]);
 
-      if (data) {
-        // Deduplicate by description
+      if (mealsRes.data) {
         const seen = new Set<string>();
-        const unique = data.filter((m: Meal) => {
+        const unique = mealsRes.data.filter((m: Meal) => {
           if (seen.has(m.description)) return false;
           seen.add(m.description);
           return true;
         });
         setRecentMeals(unique);
       }
+
+      if (recipesRes.data) {
+        setRecipes(recipesRes.data as SavedRecipe[]);
+
+        // Auto-fill from recipe query param
+        const recipeId = searchParams.get("recipe");
+        if (recipeId) {
+          const recipe = (recipesRes.data as SavedRecipe[]).find((r) => r.id === recipeId);
+          if (recipe) {
+            handleRecipeEntry(recipe);
+          }
+        }
+      }
     }
-    loadRecent();
-  }, [supabase]);
+    loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleEstimate() {
     if (!description.trim()) return;
@@ -113,8 +137,7 @@ export function MealForm() {
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    setSaved(true);
   }
 
   function handleQuickEntry(meal: Meal) {
@@ -133,8 +156,42 @@ export function MealForm() {
     });
   }
 
+  function handleRecipeEntry(recipe: SavedRecipe) {
+    setDescription(recipe.description);
+    setEstimate({
+      calories: recipe.calories ?? 0,
+      protein_g: recipe.protein_g ?? 0,
+      fat_g: recipe.fat_g ?? 0,
+      carbs_g: recipe.carbs_g ?? 0,
+    });
+    setEditValues({
+      calories: recipe.calories ?? 0,
+      protein_g: recipe.protein_g ?? 0,
+      fat_g: recipe.fat_g ?? 0,
+      carbs_g: recipe.carbs_g ?? 0,
+    });
+  }
+
   return (
     <div className="space-y-4">
+      {/* Saved recipes for quick entry */}
+      {recipes.length > 0 && !estimate && (
+        <div>
+          <p className="text-xs text-[#737373] mb-2">保存レシピ</p>
+          <div className="flex flex-wrap gap-2">
+            {recipes.map((recipe) => (
+              <button
+                key={recipe.id}
+                onClick={() => handleRecipeEntry(recipe)}
+                className="rounded-lg bg-[#1a3a2a] border border-[#22c55e33] px-3 py-2 text-xs text-[#22c55e] hover:bg-[#1a4a2a] transition-colors text-left max-w-[200px] truncate"
+              >
+                {recipe.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Recent meals for quick re-entry */}
       {recentMeals.length > 0 && !estimate && (
         <div>
@@ -276,13 +333,34 @@ export function MealForm() {
             </div>
           )}
 
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full rounded-xl bg-[#22c55e] px-4 py-3 text-white font-semibold hover:bg-[#16a34a] transition-colors disabled:opacity-50 min-h-[44px]"
-          >
-            {saving ? "保存中..." : "保存する"}
-          </button>
+          {saved ? (
+            <div className="space-y-2">
+              <p className="text-sm text-[#22c55e] text-center font-medium">
+                ✓ 食事を記録しました
+              </p>
+              <SaveRecipeButton
+                description={description}
+                calories={editMode ? editValues.calories : (estimate?.calories ?? 0)}
+                protein_g={editMode ? editValues.protein_g : (estimate?.protein_g ?? 0)}
+                fat_g={editMode ? editValues.fat_g : (estimate?.fat_g ?? 0)}
+                carbs_g={editMode ? editValues.carbs_g : (estimate?.carbs_g ?? 0)}
+              />
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="w-full rounded-xl bg-[#262626] px-4 py-3 text-[#a3a3a3] text-sm hover:bg-[#333] transition-colors min-h-[44px]"
+              >
+                ダッシュボードに戻る
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full rounded-xl bg-[#22c55e] px-4 py-3 text-white font-semibold hover:bg-[#16a34a] transition-colors disabled:opacity-50 min-h-[44px]"
+            >
+              {saving ? "保存中..." : "保存する"}
+            </button>
+          )}
         </div>
       )}
     </div>

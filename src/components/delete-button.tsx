@@ -8,7 +8,7 @@ export function DeleteButton({
   table,
   id,
 }: {
-  table: "meals" | "workout_sessions";
+  table: "meals" | "workout_sessions" | "saved_recipes";
   id: string;
 }) {
   const [confirming, setConfirming] = useState(false);
