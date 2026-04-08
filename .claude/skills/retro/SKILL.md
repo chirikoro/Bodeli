@@ -1,0 +1,1 @@
+/Users/sakakibaratakashiyu/Documents/Bodeli/.claude/skills/gstack/retro/SKILL.md

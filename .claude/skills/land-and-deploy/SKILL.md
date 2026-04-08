@@ -1,0 +1,1 @@
+/Users/sakakibaratakashiyu/Documents/Bodeli/.claude/skills/gstack/land-and-deploy/SKILL.md
