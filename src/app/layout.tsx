@@ -12,6 +12,10 @@ export const metadata: Metadata = {
   title: "Bodeli",
   description: "筋トレ × 食事を、ひとつに。",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/icon.svg",
+    apple: "/icons/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {
